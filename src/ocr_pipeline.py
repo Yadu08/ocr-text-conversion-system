@@ -22,18 +22,17 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.units import inch
 
-# Set appearance mode and color theme
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-# Load EasyOCR model (once, globally)
+
 reader = easyocr.Reader(['en'], gpu=False)
 
 # Configure Gemini API
-GEMINI_API_KEY = "AIzaSyDDL5A9t91zbnd3qmurj77pSlO_Xp-MINo"  # Get from https://makersuite.google.com/app/apikey
+GEMINI_API_KEY = "your_api_key_here"  
 
-# Initialize API configuration
+
 try:
     if GEMINI_API_KEY and GEMINI_API_KEY != "YOUR_API_KEY_HERE" and len(GEMINI_API_KEY.strip()) > 0:
         genai.configure(api_key=GEMINI_API_KEY)
@@ -77,18 +76,18 @@ def init_db():
         );
     """)
     
-    # Migration: Add ocr_method column if it doesn't exist (for existing databases)
+  
     try:
         cur.execute("ALTER TABLE notes ADD COLUMN ocr_method TEXT DEFAULT 'easyocr'")
         conn.commit()
     except sqlite3.OperationalError:
-        # Column already exists, ignore
+      
         pass
     
     conn.commit()
     conn.close()
 
-# ---------------------- AUTH / SECURITY ---------------------- #
+
 HASH_ALGO = "sha256"
 ITERATIONS = 100_000
 
@@ -182,31 +181,27 @@ def _should_skip_model(model_name: str) -> bool:
     """Check if a model should be skipped (doesn't support images or is TTS-only)."""
     model_lower = model_name.lower()
     
-    # Skip Gemma models (text-only, no image support)
+  
     if 'gemma' in model_lower:
         return True
     
-    # Skip TTS models (text-to-speech only)
     if 'tts' in model_lower:
         return True
     
-    # Skip robotics models (not for OCR)
     if 'robotics' in model_lower:
         return True
     
-    # Skip computer-use models (not for OCR)
     if 'computer-use' in model_lower:
         return True
     
-    # Skip deep-research models (not for OCR)
     if 'deep-research' in model_lower:
         return True
     
-    # Skip image-generation models (generation only, not OCR)
+
     if 'image-generation' in model_lower or 'image-preview' in model_lower:
         return True
     
-    # Skip nano-banana (not for OCR)
+
     if 'nano-banana' in model_lower:
         return True
     
@@ -214,15 +209,15 @@ def _should_skip_model(model_name: str) -> bool:
 
 def _check_model_supports_images(model_info) -> bool:
     """Check if a model supports image input."""
-    # Check supported input modalities
+
     if hasattr(model_info, 'input_token_limit'):
-        # Models with input_token_limit typically support images
+
         return True
     
-    # Check supported generation methods
+
     if hasattr(model_info, 'supported_generation_methods'):
         methods = model_info.supported_generation_methods
-        # Models that support generateContent with images
+
         if 'generateContent' in methods:
             return True
     
@@ -232,24 +227,22 @@ def get_available_gemini_model(force_refresh: bool = False):
     """Get the best available Gemini model for vision/OCR with caching."""
     global _model_cache
     
-    # Return cached model if available and not forcing refresh
     if not force_refresh and _model_cache['working_model'] is not None:
         current_time = time.time()
-        # Cache valid for 5 minutes
+
         if current_time - _model_cache['last_check'] < 300:
             return _model_cache['working_model_name'], _model_cache['working_model']
     
-    # Try to list available models first
     try:
         all_models = list(genai.list_models())
-        # Filter for models that support image input
+
         available_models = []
         for m in all_models:
             if 'generateContent' in m.supported_generation_methods:
-                # Check if model supports images by checking input modalities
+
                 if hasattr(m, 'input_token_limit') or _check_model_supports_images(m):
                     model_name = m.name
-                    # Skip models that don't support images
+
                     if not _should_skip_model(model_name):
                         available_models.append(model_name)
         
@@ -259,7 +252,7 @@ def get_available_gemini_model(force_refresh: bool = False):
         print(f"[DEBUG] Could not list models: {e}")
         available_models = []
     
-    # Priority list of models that support images (in order of preference)
+
     priority_models = [
         'models/gemini-2.5-flash',
         'models/gemini-2.5-pro',
@@ -273,68 +266,67 @@ def get_available_gemini_model(force_refresh: bool = False):
         'gemini-pro',
     ]
     
-    # Combine priority models with available models, removing duplicates and skipped models
+
     models_to_try = []
     seen = set()
     
-    # Add priority models first
+
     for model in priority_models:
         if model not in seen and not _should_skip_model(model):
             models_to_try.append(model)
             seen.add(model)
     
-    # Add other available models
+
     for model in available_models:
         if model not in seen and not _should_skip_model(model):
             models_to_try.append(model)
             seen.add(model)
     
-    # Remove models that we know don't work
+
     models_to_try = [m for m in models_to_try if m not in _model_cache['failed_models']]
     
     if not models_to_try:
         print("[ERROR] No suitable Gemini models available")
         return None, None
     
-    # Try each model
+
     for model_name in models_to_try:
-        # Skip if we know this model failed before
+
         if model_name in _model_cache['failed_models']:
             continue
             
         try:
             model = genai.GenerativeModel(model_name)
-            # Quick test to verify it works (with timeout to avoid hanging)
+
             test_response = model.generate_content("test", request_options={"timeout": 5})
             if test_response and hasattr(test_response, 'text'):
-                # Cache the working model
+
                 _model_cache['working_model'] = model
                 _model_cache['working_model_name'] = model_name
                 _model_cache['last_check'] = time.time()
-                _model_cache['quota_error_count'] = 0  # Reset quota error count on success
+                _model_cache['quota_error_count'] = 0 
                 print(f"[INFO] Using model: {model_name}")
                 return model_name, model
         except Exception as e:
             error_str = str(e).lower()
-            # Track failed models
+
             _model_cache['failed_models'].add(model_name)
             
-            # Track quota errors
             if "quota" in error_str or "429" in error_str:
                 _model_cache['quota_error_count'] = _model_cache.get('quota_error_count', 0) + 1
-                # If we get too many quota errors, clear cache and stop trying
+
                 if _model_cache['quota_error_count'] > 3:
                     _model_cache['working_model'] = None
                     _model_cache['working_model_name'] = None
                     continue
             else:
-                # Only log if it's not a quota/quota-related error (to reduce noise)
+
                 if "not found" in error_str or "404" in error_str:
-                    continue  # Don't log "not found" errors
+                    continue
                 elif "image input" in error_str or "modality" in error_str:
-                    continue  # Don't log image modality errors (expected for some models)
+                    continue
                 else:
-                    # Only log unexpected errors
+
                     pass
             continue
     
@@ -343,28 +335,28 @@ def get_available_gemini_model(force_refresh: bool = False):
 
 def check_gemini_api_status() -> tuple[bool, str]:
     """Check if Gemini API is configured and working."""
-    # Check if API key is configured
+
     if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_API_KEY_HERE" or len(GEMINI_API_KEY.strip()) == 0:
         return False, "API key not configured"
     
-    # Ensure API is configured
+
     try:
         genai.configure(api_key=GEMINI_API_KEY)
     except Exception as e:
         return False, f"Configuration error: {str(e)[:50]}"
     
     try:
-        # Check if we have a cached working model first
+
         if _model_cache['working_model'] is not None:
             current_time = time.time()
-            # If cache is still valid (less than 5 minutes old), use it
+
             if current_time - _model_cache['last_check'] < 300:
                 return True, f"Ready ({_model_cache['working_model_name']})"
         
-        # Try to find an available model with a quick test
+
         model_name, model = get_available_gemini_model(force_refresh=False)
         if not model:
-            # Check if all models failed due to quota
+
             if len(_model_cache['failed_models']) > 5:
                 # If many models failed, likely quota issue
                 return False, "Quota exceeded - All models unavailable"
