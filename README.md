@@ -8,6 +8,7 @@ An OCR-based system designed to convert handwritten and printed text into digita
 
 This project processes input images, enhances them using preprocessing techniques, and extracts text using the Tesseract OCR engine. It aims to improve accuracy for both handwritten and printed text.
 
+Includes a GUI-based application for uploading, processing, and exporting extracted text.
 ---
 
 ## Features
@@ -33,7 +34,7 @@ This project processes input images, enhances them using preprocessing technique
 
 1. Input image is provided
 2. Image is preprocessed (noise removal, thresholding)
-3. OCR engine extracts text
+3. OCR engine (Tesseract + EasyOCR fallback) extracts text
 4. Output is generated in readable format
 
 ---
@@ -44,7 +45,7 @@ This project processes input images, enhances them using preprocessing technique
 
 ![Input](images/input.png)
 
-### Step 2: Processing Interface
+### Step 2: Image Processing & OCR Execution
 
 ![Dashboard](images/dashboard.png)
 
