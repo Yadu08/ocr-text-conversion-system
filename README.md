@@ -31,3 +31,11 @@ This project processes input images, enhances them using preprocessing technique
 - Improve accuracy for complex handwriting
 - Add GUI interface
 - Support for multiple languages
+
+## Demo
+
+### Input Image
+![Input](images/input.png)
+
+### Output Result
+![Output](images/output.png)
