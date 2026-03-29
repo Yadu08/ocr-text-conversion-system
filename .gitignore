@@ -1,4 +1,27 @@
+# Python default ignores
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Virtual environments
 venv/
 venv311/
-__pycache__/
-*.pyc
+.venv
+env/
+
+# Environment files
+.env
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
