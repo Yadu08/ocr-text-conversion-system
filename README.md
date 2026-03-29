@@ -52,9 +52,7 @@ This project processes input images, enhances them using preprocessing technique
 
 ![Output](images/output.png)
 
-### (Optional) Application Interface
 
-![Login](images/login.png)
 
 ---
 
