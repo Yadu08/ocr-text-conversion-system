@@ -34,6 +34,12 @@ This project processes input images, enhances them using preprocessing technique
 
 ## Demo
 
+### Login Page
+![Login](images/login.png)
+
+### Dashboard Image
+![Dashboard](images/dashboard.png)
+
 ### Input Image
 ![Input](images/input.png)
 
